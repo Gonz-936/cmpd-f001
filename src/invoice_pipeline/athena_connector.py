@@ -5,6 +5,66 @@ import boto3
 from botocore.exceptions import ClientError
 
 class AthenaConnector:
+    def get_processed_invoice_numbers(self, table_name: str) -> set[int]:
+        """
+        Consulta la tabla de facturas en Athena para obtener todos los invoice_number únicos
+        que ya han sido procesados.
+        
+        :param table_name: El nombre de la tabla que contiene los datos de las facturas.
+        :return: Un conjunto (set) de enteros, donde cada entero es un invoice_number.
+        """
+        query = f'SELECT DISTINCT invoice_number FROM "{table_name}" WHERE invoice_number IS NOT NULL;'
+        logging.info(f"Ejecutando consulta en Athena para obtener N° de facturas procesadas: {query}")
+
+        try:
+            # 1. Iniciar la ejecución de la consulta
+            response = self.athena_client.start_query_execution(
+                QueryString=query,
+                QueryExecutionContext={'Database': self.database},
+                ResultConfiguration={'OutputLocation': self.s3_output_location}
+            )
+            query_execution_id = response['QueryExecutionId']
+            logging.info(f"Consulta de N° de Facturas iniciada con ID: {query_execution_id}")
+
+            # 2. Esperar a que la consulta termine
+            while True:
+                stats = self.athena_client.get_query_execution(QueryExecutionId=query_execution_id)
+                status = stats['QueryExecution']['Status']['State']
+                if status in ['SUCCEEDED', 'FAILED', 'CANCELLED']:
+                    break
+                time.sleep(1)
+
+            if status != 'SUCCEEDED':
+                error_info = stats['QueryExecution']['Status'].get('StateChangeReason', 'Error desconocido.')
+                logging.error(f"La consulta de Athena para N° de Facturas falló: {status}. Razón: {error_info}")
+                return set()
+
+            # 3. Obtener y procesar los resultados
+            results_paginator = self.athena_client.get_paginator('get_query_results')
+            results_iter = results_paginator.paginate(QueryExecutionId=query_execution_id)
+            
+            processed_numbers = set()
+            for results in results_iter:
+                # Omitir la primera fila que es el header
+                for row in results['ResultSet']['Rows'][1:]:
+                    if 'Data' in row and row['Data'][0].get('VarCharValue'):
+                        # Convertimos el resultado a entero antes de añadirlo al set
+                        processed_numbers.add(int(row['Data'][0]['VarCharValue']))
+            
+            logging.info(f"Se encontraron {len(processed_numbers)} invoice_numbers ya procesados en Athena.")
+            return processed_numbers
+
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'InvalidRequestException' and 'does not exist' in e.response['Error']['Message']:
+                logging.warning(f"La tabla '{table_name}' no existe aún. Se asume que no hay facturas procesadas.")
+                return set()
+            else:
+                logging.error(f"Ocurrió un ClientError al consultar Athena por N° de Facturas: {e}")
+                return set()
+        except Exception as e:
+            logging.error(f"Ocurrió un error inesperado al consultar Athena por N° de Facturas: {e}", exc_info=True)
+            return set()
+
     def __init__(self, database_name: str, bucket_name: str, region_name: str):
         """
         Inicializa el conector de Athena.
