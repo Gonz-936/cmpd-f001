@@ -1,0 +1,9 @@
+# src/requirements.txt
+beautifulsoup4
+tika
+openpyxl
+boto3
+# --- Para Google Drive ---
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
