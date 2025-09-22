@@ -1,0 +1,5 @@
+# Instalar nuestra librería de herramientas directamente desde GitHub
+-e git+https://github.com/Gonz-936/py_toolbox.git#egg=py_toolbox
+
+# Dependencias que son específicas de ESTE proyecto y no de la librería
+beautifulsoup4

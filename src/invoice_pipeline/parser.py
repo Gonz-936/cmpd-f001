@@ -1,17 +1,10 @@
 # src/invoice_pipeline/parser.py
 
 import re
-import json
 import logging
-import os
 from datetime import date
 from pathlib import Path
-from difflib import SequenceMatcher
 from bs4 import BeautifulSoup
-from tika import parser as tika_parser
-
-from .storage import ensure_dirs
-from .config import BASE_DIR, LOG_LEVEL
 
 # =========================
 #   Excepción de negocio
@@ -92,10 +85,8 @@ def fuzzy_best(s: str, candidates: list[str]) -> tuple[str | None, float]:
 #     Servicio principal
 # =========================
 class ParserService:
-    def __init__(self, base_dir: str = BASE_DIR):
-        self.dirs = ensure_dirs(base_dir)
-        # La configuración del logging ahora la maneja el orquestador
-        # para tener un log centralizado.
+    def __init__(self):
+        logging.info("ParserService inicializado.")
     def pdf_to_html(self, pdf_path: str) -> str:
         pdf_path_obj = Path(pdf_path)
         # Creamos un nombre de archivo HTML basado en el nombre del PDF
@@ -190,20 +181,15 @@ class ParserService:
                     })
             return rows_out
 
-    def run(self, local_pdf_path: str) -> list[dict]:
+    def run(self, html_path: str) -> list[dict]:
         """
-        Ejecuta el pipeline de parseo.
+        Ejecuta el pipeline de parseo desde un archivo HTML.
         """
-        if not local_pdf_path or not Path(local_pdf_path).exists():
-            raise BusinessException("INPUT_MISSING", f"El archivo PDF no se encuentra en: {local_pdf_path}")
+        if not html_path or not Path(html_path).exists():
+            raise BusinessException("INPUT_MISSING", f"El archivo HTML no se encuentra en: {html_path}")
 
-        logging.info(f"Iniciando parseo del archivo: {local_pdf_path}")
-
-        # 1. Convertir el PDF a HTML
-        html_file = self.pdf_to_html(local_pdf_path)
-
-        # 2. Parsear la tabla de detalles (ya no necesita el catálogo)
-        rows = self.parse_detail_table(html_file)
+        logging.info(f"Iniciando parseo del archivo HTML: {html_path}")
+        rows = self.parse_detail_table(html_path)
 
         logging.info(f"Parseo completado. Se extrajeron {len(rows)} filas.")
         return rows
