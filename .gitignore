@@ -1,0 +1,7 @@
+.venv
+__pycache__
+*.pyc
+.git
+.vscode
+process_data_local
+py_toolbox/

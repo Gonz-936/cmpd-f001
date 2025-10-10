@@ -1,4 +1,13 @@
-# Dependencias que son específicas de ESTE proyecto y no de la librería
-beautifulsoup4
+# Dependencias de terceros para el proyecto
+boto3
 pandas
-pyarrow
+pyarrow==14.0.1  # <-- ¡AQUÍ ESTÁ LA CORRECCIÓN!
+beautifulsoup4
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
+tika
+requests
+
+# Instala py_toolbox desde la carpeta local en modo "editable".
+-e ./py_toolbox
