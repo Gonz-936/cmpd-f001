@@ -10,4 +10,4 @@ tika
 requests
 
 # Instala py_toolbox desde la carpeta local en modo "editable".
--e ./py_toolbox
+git+https://github.com/Gonz-936/py_toolbox.git
